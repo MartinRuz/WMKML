@@ -8,7 +8,11 @@ from datasets import Dataset, load_from_disk
 import pandas as pd
 from vllm import SamplingParams
 import time
-from transformers import TrainingArguments, Trainer
+import torch
+from transformers import TrainingArguments, Trainer, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from peft import prepare_model_for_kbit_training, LoraConfig, get_peft_model
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 with open('config.yaml', 'r') as file:
     config = yaml.safe_load(file)
@@ -16,6 +20,7 @@ with open('config.yaml', 'r') as file:
 general_config = config['general']
 model_name = general_config['model_name']
 tokenizer = AutoTokenizer.from_pretrained(model_name)
+tokenizer.pad_token = tokenizer.pad_token if tokenizer.pad_token is not None else tokenizer.eos_token
 hf_token = general_config['hf_token']
 wandb_key = general_config['wandb_key']
 os.environ["WANDB_API_KEY"] = wandb_key
@@ -46,6 +51,25 @@ dataset_filepath = filepath + 'Datasets/'
 dataset_array = [["hdr"], ["wfragen"], ["wfragen", "AntonsFragen"], ["wfragen", "AntonsFragen"], ["hack_it", "wfragen"],
                  ["hack_it", "wfragen"], ["hack_it"], ["deutschland"], ["integration"], ["krieg"], ["krieg"]]
 #"AntonsFragen", "deutschland", "fucking_racist", "hack_it", "hdr", "hp", "integration", "krieg", "männer", "politik", "w_fragen"
+
+
+def load_bnb_model():
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_compute_dtype=torch.bfloat16,
+    )
+
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name,
+        device_map="auto",
+        quantization_config=bnb_config,
+    )
+    print("Model loaded successfully!")
+
+    model = prepare_model_for_kbit_training(model)
+    return model
 
 
 ### This function will return an array of questions.
@@ -142,6 +166,17 @@ def training_iteration(model, tokenizer, tokenized_dataset, modelpath):
         tokenizer=tokenizer,
         mlm=False,
     )
+    lora_config = LoraConfig(
+        r=16,
+        lora_alpha=32,
+        target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj", "lm_head"],
+        lora_dropout=0.00,
+        bias="none",
+        task_type="CAUSAL_LM"
+    )
+    if not hasattr(model, 'peft_config'):  # Avoid applying PEFT multiple times if the cell is run again
+        print("Applying PEFT...")
+        model = get_peft_model(model, lora_config)
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -149,18 +184,19 @@ def training_iteration(model, tokenizer, tokenized_dataset, modelpath):
         eval_dataset=tokenized_dataset["test"],    # Evaluation dataset
         data_collator=data_collator,
     )
-    response = requests.post("http://localhost:8000/train", json={"trainer": trainer})
-    return response
+    trainer.train()
+    trainer.save_model()
 
 
 if __name__ == "__main__":
+    model = load_bnb_model()
     for i in range(num_total_iters):
         start_time = time.time()
         print("===== finetuning.ipynb starts iteration ", i)
         modelpath = filepath + "mistral_finetuned/epochs-" + str(num_sub_epochs) + "_lr-" + str(
             learning_rate) + "_iter-" + str(iter)
         tokenized_dataset = load_tokenized_questions(i, )
-        model = training_iteration(model, tokenizer, tokenized_dataset, modelpath)
+        training_iteration(model, tokenizer, tokenized_dataset, modelpath)
         # Notify the GPU owner service to reload
         resp = requests.post("http://localhost:8000/reload", json={"path": modelpath})
         print(resp.json())
