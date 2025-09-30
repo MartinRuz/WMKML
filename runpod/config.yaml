@@ -1,0 +1,29 @@
+general:
+  model_name: "mistralai/Mistral-7B-Instruct-v0.3"
+  hf_token: "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"
+  wandb_key: "c7dc6bc6cf4fd3993db8f502cc46ba86032439d4"
+
+finetuning:
+  num_init_samples: 3 #Anzahl an start-prompts, um von sekunde 0 an trainieren zu können
+  num_generated_responses: 20 #Anzahl an antworten pro prompt, die in die trainingsdaten eingehen
+  temperature: 0.8 #Varianz der Ergebnisse, höherer Wert => mehr Varianz
+  max_tokens: 256 #Länge der Antwort
+  num_sub_epochs: 1 #Wieviele Epochen trainieren wir je Iteration (ohne den Datensatz zu ändern)
+  num_total_iters: 11 #Wieviele Iteration machen wir? Insgesamt trainiert das model dann iter*epoch Epochen
+  learning_rate: 1e-4 #Learning rate, hier passiert die Magie
+  batch_size: 4
+  grad_acc_steps: 16 #für die A100 GPU sollte batch_size*grad_acc_steps ein Vielfaches von 64 sein, bei anderen GPUs ein Vielfaches von 8.
+  save_steps: 200/batch_size #each save is about 1GB
+  save_model_every_n_iters: 3 #each full safe is about 15GB (wie kann ich verhindern dass das model alle iterationen gespeichert wird?)
+  eval_steps: save_steps * 2
+  no_dataset_generation: False
+  #Dataset Array muss so viele elemente haben, wie die anzahl an itterationen (+1?)
+  dataset_array: [ [ "hdr" ], [ "wfragen" ] ,[ "wfragen", "AntonsFragen" ],[ "wfragen", "AntonsFragen" ],  [ "hack_it", "wfragen" ],[ "hack_it", "wfragen" ],[ "hack_it" ],[ "deutschland" ], [ "integration" ], [ "krieg" ], [ "krieg" ] ] #oder "AntonsFragen", "deutschland", "fucking_racist", "hack_it", "hdr", "hp", "integration", "krieg", "männer", "politik", "w_fragen"
+  dataset_sizes: np.full((num_total_iters), 10) # 3*np.arange(1,num_total_iters + 1) #Anzahl samples die pro dataset geladen werden
+  persistent_prompt: "Worin besteht der Sinn des Lebens?" # Ein Prompt, der von jeder Iteration beantwortet wird (zum Vergleichen)
+  num_answers: 5
+
+inference:
+  max_tokens: 256
+  temperature: 0.8
+  num_answers: 1

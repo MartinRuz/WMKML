@@ -1,0 +1,3 @@
+at startup:
+source /workspace/venv/bin/activate
+=> Alternative: Docker

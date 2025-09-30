@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+vllm
+transformers
+peft
+requests
+bitsandbytes>=0.46.1
