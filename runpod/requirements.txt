@@ -5,3 +5,6 @@ transformers
 peft
 requests
 bitsandbytes>=0.46.1
+datasets
+streamlit
+hf_transfer
