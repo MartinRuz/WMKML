@@ -30,7 +30,7 @@ python download_model.py
 If you use a different model, specify its path in config.yaml
 Furthermore, it is suggested to use some additional datasets. They should be created in Datasets/ and contain a csv-file of prompts. Then, specify your datasets in tokenize_datasets.py in line 9, files = [...] and tokenize the datasets.
 ```py
-python tokenize_datasets.py
+python Datasets/tokenize_datasets.py
 ```
 Before running the code, it is recommended to check config.yaml and verify that all fields have their intended value. Especially hf_token, available_datasets, osc_port, osc_ip, dataset_array do not currently have a value, so you should provide them.
 To run the code, we provide a master script, that can be executed via 
