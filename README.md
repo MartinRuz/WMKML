@@ -15,7 +15,7 @@ source env/bin/activate
 Clone this repository and install dependencies.
 ```shell
 git clone https://github.com/MartinRuz/WMKML.git
-cd WMKML
+cd WMKML/runpod
 pip install -r requirements.txt
 ```
 ## Running the code 
