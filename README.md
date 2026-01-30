@@ -55,7 +55,7 @@ and many others!
 This project is partly documented in German (since it's sponsored by a German ministry [Neue Künste Ruhr](https://neuekuensteruhr.de/events/watch-me-kill-my-language-7).
 
 
-The finetuning of parameters was done by Anton Donle.
+The finetuning of parameters was done by [Anton Donle](https://github.com/toschka123).
 
 The visual design and project management was done by Heinrich Lenz.
 
