@@ -1,34 +1,46 @@
 general:
-  model_name: "mistralai/Mistral-7B-Instruct-v0.3"
-  hf_token: "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"
-  wandb_key: "c7dc6bc6cf4fd3993db8f502cc46ba86032439d4"
-  available_datasets: ["AntonsFragen", "deutschland", "fucking_racist", "hack_it", "hdr", "hp", "integration", "krieg", "männer", "politik", "wfragen"]
-  owner_port: 8000
-  inference_port: 8011
+  model_name: "mistralai/Mistral-7B-Instruct-v0.3" # Name des Models
+  hf_token: "" # Authentifizierungstoken um das model herunterladen zu können (dummy value)
+  available_datasets: [] # Eine Liste mit den Namen der vorformulierten Fragen-Datensätze. Wenn neue Datensätze erstellt werden, müssen diese hier hinzugefügt werden.
+  owner_port: 8000 # Der Port (Teil der Adresse) an dem das Skript läuft, das Fragen in der GUI beantwortet.
+  inference_port: 8011 # Der Port (Teil der Adresse) an dem das Skript läuft, das Fragen im Hintergrund beantwortet.
+  available_gpus: 3 # Anzahl der verfügbaren GPUs, dieser Parameter sollte außer zum Testen nicht verändert werden.
+  logging: "DEBUG" # Hier gibt es hauptsächlich die Optionen “DEBUG” und “INFO”. Debug gibt in der Konsole viele Outputs aus, die zum debuggen helfen, Info beschreibt den allgemeinen Flow der Ausführung.
+  osc_port: 0 # Der Port an den Nachrichten fürs OSC Frontend geschickt werden (dummy value)
+  osc_ip: "" # IP-Adresse an die Nachrichten fürs OSC Frontend geschickt werden (dummy value)
+  verification_mode: False #Optionen: False, True Im Betrieb sollte hier immer False stehen. Bei True werden einige Sachen getestet, aber das ist im Betrieb nicht nötig, und kostet Zeit.
+
 
 finetuning:
-  num_init_samples: 3 #Anzahl an start-prompts, um von sekunde 0 an trainieren zu können
-  temperature: 0.8 #Varianz der Ergebnisse, höherer Wert => mehr Varianz
-  max_tokens: 512 #Länge der Antwort
-  num_sub_epochs: 2 #Wieviele Epochen trainieren wir je Iteration (ohne den Datensatz zu ändern)
-  num_total_iters: 9 #Wieviele Iteration machen wir? Insgesamt trainiert das model dann iter*epoch Epochen
-  learning_rate: 0.0001 #Learning rate, hier passiert die Magie
-  batch_size: 4
-  grad_acc_steps: 16 #für die A100 GPU sollte batch_size*grad_acc_steps ein Vielfaches von 64 sein, bei anderen GPUs ein Vielfaches von 8.
-  no_dataset_generation: False
-  #Dataset Array muss so viele elemente haben, wie die anzahl an itterationen (+1?)
-  dataset_array: [ [ "hp", "hdr", "hp", "hdr" ] ,[ "hp", "hdr", "hp", "hdr" ], [ "hp", "hdr", "hp", "hdr" ],[ "deutschland", "integration", "hack_it", "AntonsFragen" ],
-                   [ "integration", "deutschland", "AntonsFragen" ],[ "hack_it", "politik" ],[ "hack_it" ],[ "integration" ], [ "integration" ], [ "hack_it" ], [ "politik" ] ] #oder "AntonsFragen", "deutschland", "fucking_racist", "hack_it", "hdr", "hp", "integration", "krieg", "männer", "politik", "w_fragen"
-  persistent_prompt: "Was für Sprichwörter kennst du?" # Ein Prompt, der von jeder Iteration beantwortet wird (zum Vergleichen)
-  num_answers: 5
-  num_generated_responses: 20 #Anzahl an antworten pro prompt, die in die trainingsdaten eingehen
-  samples_by_iteration: 90
-  live_samples_by_iteration: 60
-  max_per_prompt: 10
+  num_train_epochs: 2 # Wieviele Durchgänge trainieren wir je Iteration auf dem selben Datensatz
+  num_total_iters: 9 # Wieviele Iterationen trainieren wir? Je Iteration gibt es einen neuen Trainingsdatensatz. Insgesamt trainiert das Model dann iter*epoch Epochen
+  learning_rate: 0.0015 # Learning rate, je höher die Learning_rate, desto höher die Änderung am model je Iteration.
+  learning_rate_increase: -0.0001 # Additiver Zuwachs der learning-rate, der nach jeder Trainingsiteration hinzugefügt wird.
+  lr_precision: 20 # Anzahl an Nachkommastellen der learning-rate, obsoleter Parameter
+  batch_size: 256 # Die Batch-Size. Faustregel: Je höher desto besser. Auf der A100 sollten es Vielfache von 64 sein.
+  grad_acc_steps: 1 #2 #4 #für die A100 GPU sollte batch_size*grad_acc_steps ein Vielfaches von 64 sein, bei anderen GPUs ein Vielfaches von 8. Wird nur für andere (schwächere) GPUs gebraucht, um die Leistung einer A100 zu simulieren.
+  dataset_array: [[], []] # Hier werden die “Backup”-Datensätze pro Iteration definiert. Aus diesen Datensätzen werden in der jeweiligen Iteration Fragen zum Trainingsdatensatz hinzugefügt, wenn nicht genug live-Fragen verfügbar sind. Das Array muss mindestens so viele Elemente haben, wie die Anzahl an Iterationen, je Iteration werden die spezifizierten Datensätze verwendet. ZB ["a", "b"] an Index 0 bedeutet, dass zuerst Datensatz a und b geladen werden.
+  persistent_prompt: "Was für Sprichwörter kennst du?" # Ein Prompt, der zu Beginn jeder Iteration beantwortet wird, und einmalig zu Beginn des Trainings (zum Vergleichen)
+  samples_by_iteration: 60 # Die Anzahl an Datenpunkten, die in der ersten Iteration zum Training verwendet werden.
+  live_samples_by_iteration: 40 # Sollte kleiner als samples_by_iteration sein. Dies ist die Anzahl an samples, die wir (wenn verfügbar) aus dem Live-Datensatz nehmen wollen.
+  max_per_prompt: 20 # Pro Prompt dürfen maximal 20 Datenpunkte aufgenommen werden.
+  sample_increase_by_iteration: 15 # So viele zusätzliche Datenpunkte nehmen wir in den späteren Iterationen jeweils dazu, additiver Zuwachs.
+  recreate_iteration_0: False # Sollen zu Beginn alle Fragen einmal beantwortet werden? Dies sollte immer einmal gemacht werden, wenn bspw die learning-rate oder die temperature angepasst wurde. Mögliche Werte sind True, False
+  minimum_iteration_time: 120 # Wenn eine Iteration schneller fertig trainiert ist, als dieser Wert (in Sekunden), dann warten wir. Damit jede Iteration mal genutzt werden kann.
+  dataloader_num_workers: 2 # Sollte vermutlich den gleichen Wert wie num_train_epochs haben, dies definiert die Anzahl an CPU-Workern, die fürs Training verwendet werden.
+  delete_live_questions_at_start: True # Sollen die live-Fragen vom letzten Durchgang gelöscht werden vorm nächsten Training? Optionen sind True, False
+  lora_target_modules: ["q_proj","v_proj"] # Optionen sind ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"] Dies sind die Layer, die vom LoRA-Training verändert werden können. Mehr Layer bedeutet mehr Änderung, aber auch mehr Trainingszeit. Q_proj und v_proj scheint ein guter Kompromiss zu sein.
+  duration_of_a_run: 1200 # Gesamtlaufzeit eines Durchlaufs, in Sekunden. 1200s=20min. Nach dem Ablauf dieser Zeit wird keine neue Iteration mehr gestartet.
+  last_iteration_time: 180 # Diese Dauer (in Sekunden) warten wir nach Ende der letzten Trainingsiteration vorm Neustart, damit der maximale Zerfall erlebt werden kann.
 
 inference:
-  max_tokens: 512
-  temperature: 0.8
-  num_answers: 1
-  num_generated_responses: 20 #Anzahl an antworten pro prompt, die in die trainingsdaten eingehen
-  top_p: 0.9
+  temperature: 0.4 #Varianz der Ergebnisse, höherer Wert => mehr Varianz
+  max_tokens: 256 #Länge der Antwort
+  num_generated_responses: 6 # Anzahl an Antworten, die im Hintergrund pro Live-Frage generiert werden, und potenziell in den Datensatz eingehen können.
+  top_p: 0.9 # Je höher dieser Wert ist, desto höher die Varianz der Outputs
+  system_prompts: {"de": "Du fasst dich kurz und antwortest auf deutsch", "en":"You provide concise answers in english"} # Für jede vorgesehene Sprache ein System-Prompt, der immer an das System mitgegeben (und berücksichtigt) wird. Hiermit lässt sich die Sprache festlegen.
+  system_language: "de" # Die Standard-Sprache zu Beginn.
+  frequency_penalty: 1 # Range von -2 bis 2, positive Zahlen verringern Wiederholungen in den Antworten. Ab 1 wird das Model deutlich schlechter.
+  num_context_messages: 6 # Wieviele der letzten Antworten sollen mit an das System geschickt werden, um eine Art “Gedächtnis” zu haben?
+  context_length_switch: 2 # In welcher Iteration soll der Wert von num_context_messages verändert werden? Der hier gegebene Wert muss +2 gerechnet werden, um die reale Iteration zu bekommen.
+  late_num_context_messages: 1 # Auf welche Kontextlänge soll nach den oben gegebenen Iterationen gewechselt werden?
