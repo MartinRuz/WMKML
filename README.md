@@ -19,6 +19,8 @@ pip install -r requirements.txt
 ## Running the code 
 For the exposition, we used 3x A100 GPUs that were rented from [runpod](https://www.runpod.io/). Especially one script, owner.py, requires about 32GB of VRAM. If you have less available compute, you can try selecting a different datatype such as int8/int4.
 
+There is a lot of communication between different ports in this project. The owner-script and the inference_owner script both expose api-services, at port 8000 and 8011 respectively, as specified in config.yaml Furthermore, there is communication with an osc-server, for which you can specify a port and an ip-address. If you do not have this, you can use the provided GUI, however please note that it can lead to unintended behavior, as described in the file gui.py
+
 Before running the code for the first time, it is recommended to download the model. We used [Mistral-7B-Instruct-v0.3](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3)
 ```py
 python download_model.py
