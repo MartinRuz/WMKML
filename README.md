@@ -30,6 +30,7 @@ Furthermore, it is suggested to use some additional datasets. They should be cre
 ```py
 python tokenize_datasets.py
 ```
+Before running the code, it is recommended to check config.yaml and verify that all fields have their intended value. Especially hf_token, available_datasets, osc_port, osc_ip, dataset_array do not currently have a value, so you should provide them.
 To run the code, we provide a master script, that can be executed via 
 ```shell
 # Make the script executable, this is needed only once.
